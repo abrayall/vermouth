@@ -1,5 +1,11 @@
 package vermouth;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.Properties;
+
 public class Version {
 	
 	private int major = 0;
@@ -118,6 +124,48 @@ public class Version {
 		return version;
 	}
 	
+	public static Version parse(Properties properties) {
+		return parse(
+			get(properties, "major", "0") + "." + 
+			get(properties, "minor", "0") + "." + 
+			get(properties, "patch", "0") + 
+			valid(get(properties, "qualifier", get(properties, "prerelease", "")), "-") + 
+			valid(get(properties, "metadata", ""), "+")
+		);			
+	}
+
+	public static Version load(String name) throws Exception {
+		File file = new File(name);
+		if (file.exists() == true)
+			return load(file(file));
+		else
+			return load(Version.class.getClassLoader().getResourceAsStream(name));
+	}
+
+	protected static Version load(InputStream input) throws Exception {
+		return parse(properties(input));
+	}	
+	
+	protected static Properties properties(InputStream inputStream) throws Exception {
+		Properties properties = new Properties();
+		try {
+			properties.load(inputStream);
+		} catch(Exception e) {} 
+		finally {
+			inputStream.close();
+		}
+				
+		return properties;
+	}
+	
+	protected static InputStream file(File file) {
+		try {
+			return new FileInputStream(file);
+		} catch (Exception e) {
+			return new ByteArrayInputStream(new byte[0]);
+		}
+	}
+	
 	private static int integer(String value, int defaultValue) {
 		try {
 			return Integer.parseInt(value);
@@ -126,26 +174,15 @@ public class Version {
 		}
 	}
 	
-	/*
-	private static String load(String name) {
-		File file = new File(name);
-		if (file.exists() == true)
-			return load(file(file));
-		else
-			return load(Version.class.getClassLoader().getResourceAsStream(name));
-	}
-
-	private static String load(InputStream input) {
-		Properties properties = properties(input);
-		return properties.getProperty("major", "0") + "." + properties.getProperty("minor", "0") + "." + properties.getProperty("maintenance", "0") + "." + properties.getProperty("revision", "0");
+	private static String get(Properties properties, String key, String defaultValue) {
+		return properties.getProperty(key, properties.getProperty("version." + key, defaultValue));
 	}
 	
-	private static InputStream file(File file) {
-		try {
-			return new FileInputStream(file.toFile());
-		} catch (Exception e) {
-			return new ByteArrayInputStream(new byte[0]);
-		}
-	} */
+	private static String valid(String value, String prefix) {
+		if (value != null && value.equals("") == false)
+			return prefix + value;
+		
+		return "";
+	}
 }
 

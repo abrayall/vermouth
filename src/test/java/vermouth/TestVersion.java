@@ -1,5 +1,7 @@
 package vermouth;
 
+import java.util.Properties;
+
 import javax.lang.Assert;
 
 public class TestVersion {
@@ -8,6 +10,7 @@ public class TestVersion {
 		testQualifiedVersions();
 		testMetadataVersions();
 		testComplexVersions();
+		testLoad();
 	}
 	
 	public static void testSimpleVersions() throws Exception {
@@ -110,5 +113,48 @@ public class TestVersion {
 		Assert.equals(false, version.equals("2.1111.994"));
 		Assert.equals(false, version.equals("2.1111.994-beta1"));
 		Assert.equals(false, version.equals(10));
+	}
+	
+	public static void testLoad() throws Exception {
+		Properties properties = new Properties();
+		Assert.equals("0.0.0", Version.parse(properties).toString());
+		
+		properties.setProperty("major", "1");
+		Assert.equals("1.0.0", Version.parse(properties).toString());
+		
+		properties.remove("major");
+		properties.setProperty("version.major", "2");
+		Assert.equals("2.0.0", Version.parse(properties).toString());
+		
+		properties.setProperty("minor", "20");
+		Assert.equals("2.20.0", Version.parse(properties).toString());
+		
+		properties.remove("minor");
+		properties.setProperty("version.minor", "22");
+		Assert.equals("2.22.0", Version.parse(properties).toString());
+
+		properties.setProperty("patch", "33");
+		Assert.equals("2.22.33", Version.parse(properties).toString());
+		
+		properties.remove("patch");
+		properties.setProperty("version.patch", "42");
+		Assert.equals("2.22.42", Version.parse(properties).toString());
+
+		properties.setProperty("qualifier", "beta1");
+		Assert.equals("2.22.42-beta1", Version.parse(properties).toString());
+		
+		properties.remove("qualifier");
+		properties.setProperty("version.qualifier", "beta2");
+		Assert.equals("2.22.42-beta2", Version.parse(properties).toString());
+	
+		properties.setProperty("metadata", "build7");
+		Assert.equals("2.22.42-beta2+build7", Version.parse(properties).toString());
+		
+		properties.remove("metadata");
+		properties.setProperty("version.metadata", "build8");
+		Assert.equals("2.22.42-beta2+build8", Version.parse(properties).toString());
+		
+		properties.remove("version.qualifier");
+		Assert.equals("2.22.42+build8", Version.parse(properties).toString());
 	}
 }
