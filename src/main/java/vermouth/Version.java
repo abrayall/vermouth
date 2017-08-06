@@ -356,14 +356,51 @@ public class Version {
 
 	
 	/**
-	 * Loads a version from the given inputstream containing a properties file 
-	 * @param input the inputstream containing the contents of a properties file
+	 * Loads a version from the given inputstream containing a properties format 
+	 * @param input the inputstream containing the contents of a properties format
 	 * @return a version object representing the version contained in the given inputstream
 	 * @throws Exception if an error is encountered while reading from the inputstream
 	 */
 	public static Version load(InputStream input) throws Exception {
 		return parse(properties(input));
 	}	
+	
+	
+	/**
+	 * Stores a version to a given outputstream in properties format
+	 * @param version the version object that should be stored
+	 * @param output the outputstream that the version should be stored to
+	 * @return the given version object
+	 * @throws Exception if an error is encountered while storing
+	 */
+	public static Version store(Version version, OutputStream output) throws Exception {
+		version.properties().store(output, "");
+		return version;
+	}
+	
+	
+	/**
+	 * Stores a version to a given file in properties format
+	 * @param version the version object that should be stored
+	 * @param file the file that the version should be stored to
+	 * @return the given version object
+	 * @throws Exception if an error is encountered while storing
+	 */
+	public static Version store(Version version, File file) throws Exception {
+		return store(version, new FileOutputStream(file));
+	}
+	
+	
+	/**
+	 * Stores a version to a given file in properties format
+	 * @param version the version object that should be stored
+	 * @param file the name of the file that the version should be stored to
+	 * @return the given version object
+	 * @throws Exception if an error is encountered while storing
+	 */
+	public static Version store(Version version, String file) throws Exception {
+		return store(version, new File(file));
+	}
 	
 	
 	/**

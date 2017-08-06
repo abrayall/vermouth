@@ -1,5 +1,7 @@
 package vermouth;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.Properties;
 
 import javax.lang.Assert;
@@ -11,6 +13,7 @@ public class TestVersion {
 		testMetadataVersions();
 		testComplexVersions();
 		testLoad();
+		testStore();
 		testProperties();
 	}
 	
@@ -164,8 +167,17 @@ public class TestVersion {
 		Assert.equals("11", properties.getProperty("major"));
 		Assert.equals("101", properties.getProperty("minor"));
 		Assert.equals("1201", properties.getProperty("patch"));
-		Assert.equals("beta1", properties.getProperty("qualifier"));
-		Assert.equals("beta1", properties.getProperty("prerelease"));
+		Assert.equals("build2", properties.getProperty("metadata"));
+	}
+	
+	public static void testStore() throws Exception {
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		Version.store(Version.parse("11.101.1201-beta1+build2"), output);
+		
+		Properties properties = Version.load(new ByteArrayInputStream(output.toByteArray())).properties();
+		Assert.equals("11", properties.getProperty("major"));
+		Assert.equals("101", properties.getProperty("minor"));
+		Assert.equals("1201", properties.getProperty("patch"));
 		Assert.equals("build2", properties.getProperty("metadata"));
 	}
 }
