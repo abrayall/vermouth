@@ -12,7 +12,7 @@
   patch=0
   ```
   3. Update build process to ensure that version.properties is packaged in our main jar file
-  4. Use in your code to load current version when needed like below
+  4. Use Version class in your code to load current version when needed like below
   ```java
     import vermouth.Version;
     ...
