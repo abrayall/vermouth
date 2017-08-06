@@ -1,9 +1,8 @@
 package vermouth;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
+import java.io.*;
+import java.net.URL;
+import java.util.Enumeration;
 import java.util.Properties;
 
 /**
@@ -212,6 +211,50 @@ public class Version {
 		return this.major + "." + this.minor + "." + this.patch + 
 			(this.qualifier.equals("") == false ? "-" + this.qualifier : "") + 
 			(this.metadata.equals("") == false ? "+" + this.metadata : "");
+	}	
+	
+	
+	/**
+	 * Searches for version.properties files in current directory and classpath and returns version object representing the one found
+	 * @return a version object representing the version.properties found and null if nothing was found
+	 * @throws Exception if an error is encountered while loading version.properties
+	 */
+	public static Version getVersion() throws Exception {
+		return getVersion(getCallingClass());
+	}
+		
+	
+	/**
+	 * Searches for version.properties files in current directory and classpath in the context of the given class and returns version object representing the one found
+	 * @param clazz the class that should be used to searched for the version.properites (only files from the same jar file)
+	 * @return a version object representing the version.properties found and null if nothing was found
+	 * @throws Exception if an error is encountered while loading version.properties
+	 */
+	public static Version getVersion(Class<?> clazz) throws Exception {
+		return getVersion(clazz, clazz.getClassLoader());
+	}
+	
+	
+	/**
+	 * Searches for version.properties files in current directory and classpath using the given classloader and returns version object representing the one found
+	 * @param classloader the classloader that should be used to search for version.properties
+	 * @return a version object representing the version.properties found and null if nothing was found
+	 * @throws Exception if an error is encountered while loading version.properties
+	 */
+	public static Version getVersion(ClassLoader classloader) throws Exception {
+		return getVersion(null, classloader);
+	}
+	
+	
+	/**
+	 * Searches for version.properties files in current directory and classpath using the given classloader and returns version object representing the one found
+	 * @param clazz the class that should be used to searched for the version.properites (only files from the same jar file)
+	 * @param classloader the classloader that should be used to search for version.properties
+	 * @return a version object representing the version.properties found and null if nothing was found
+	 * @throws Exception if an error is encountered while loading version.properties
+	 */
+	public static Version getVersion(Class<?> clazz, ClassLoader classloader) throws Exception {
+		return load("version.properties", clazz, classloader);
 	}
 	
 	
@@ -258,19 +301,35 @@ public class Version {
 		);			
 	}
 
-	
 	/**
 	 * Loads a version from a given properties file name from the filesystem (if file exists) and/or the classpath
 	 * @param name the name of the properties file
+	 * @param classloader the classloader that should be used to find the file if the file does not exist on the filesystem
 	 * @return a version object representing the version contained in the given properties file name
 	 * @throws Exception if an error is encountered while trying to load the given file from the filesystem or the classpath
 	 */
 	public static Version load(String name) throws Exception {
+		return load(name, Version.class, Version.class.getClassLoader());
+	}
+	
+	
+	/**
+	 * Loads a version from a given properties file name from the filesystem (if file exists) and/or the classpath
+	 * @param name the name of the properties file
+	 * @param classloader the classloader that should be used to find the file if the file does not exist on the filesystem
+	 * @return a version object representing the version contained in the given properties file name
+	 * @throws Exception if an error is encountered while trying to load the given file from the filesystem or the classpath
+	 */
+	public static Version load(String name, Class<?> clazz, ClassLoader classloader) throws Exception {
+		URL url = search(name, clazz, classloader);
+		if (url != null)
+			return load(url.openStream());
+		
 		File file = new File(name);
 		if (file.exists() == true)
 			return load(file(file));
-		else
-			return load(Version.class.getClassLoader().getResourceAsStream(name));
+		
+		return null;
 	}
 
 	
@@ -285,6 +344,7 @@ public class Version {
 	}	
 	
 	
+	
 	/**
 	 * Loads properties from a given inputstream
 	 * @param inputStream the inputstream that the properties should be loaded from
@@ -297,7 +357,7 @@ public class Version {
 			properties.load(inputStream);
 		} catch(Exception e) {} 
 		finally {
-			inputStream.close();
+			if (inputStream != null) inputStream.close();
 		}
 				
 		return properties;
@@ -315,6 +375,47 @@ public class Version {
 		} catch (Exception e) {
 			return new ByteArrayInputStream(new byte[0]);
 		}
+	}
+	
+	
+	/**
+	 * Searches for files with a given name in a given class context (same jar file) using a given classloader
+	 * @param name the name of the file that should be searched for
+	 * @param context the class that should be used to limit the search (same jar file) (null for all classpath)
+	 * @param classloader the classloader that should be used to search for files with the given name
+	 * @return the URL representing the first file with the matching name in the context of the given class
+	 * @throws Exception if an error is encountered while searching
+	 */
+	protected static URL search(String name, Class<?> context, ClassLoader classloader) throws Exception {
+		if (context == null)
+			return classloader.getResource(name);
+		
+		Enumeration<URL> urls = classloader.getResources(name);
+		while (urls.hasMoreElements()) {
+			URL url = urls.nextElement();
+			if (url.toString().contains(context.getProtectionDomain().getCodeSource().getLocation().toString()))
+				return url;
+		}
+		
+		return null;
+	}
+	
+	
+	/**
+	 * Gets the class of the code that called the current method
+	 * @return the Class representing the code that call the current method
+	 * @throws Exception if an error is encountered while determining calling class
+	 */
+	protected static Class<?>
+	getCallingClass() throws Exception {
+        StackTraceElement[] elements = Thread.currentThread().getStackTrace();
+        for (int i=1; i< elements.length; i++) {
+            StackTraceElement element = elements[i];
+            if (element.getClassName().equals(Version.class.getName()) == false && element.getClassName().indexOf("java.lang.Thread") != 0)
+            	return ClassLoader.getSystemClassLoader().loadClass(element.getClassName());
+        }
+        
+        return Version.class;
 	}
 	
 	
