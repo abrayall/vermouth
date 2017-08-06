@@ -1,29 +1,49 @@
 package vermouth;
 
-
 public class Version {
 	
 	private int major = 0;
 	private int minor = 0;
 	private int patch = 0;
 	
+	private String metadata = "";
+	private String qualifier = "";
+	
 	public Version() {}
 	public Version(int major, int minor, int patch) {
+		this(major, minor, patch, "", "");
+	}
+	
+	public Version(int major, int minor, int patch, String qualifier, String metadata) {
 		this.major = major;
 		this.minor = minor;
 		this.patch = patch;
+		this.qualifier = qualifier;
+		this.metadata = metadata;
 	}
 	
 	public int getMajor() {
-		return major;
+		return this.major;
 	}
 	
 	public int getMinor() {
-		return minor;
+		return this.minor;
 	}
 	
 	public int getPatch() {
-		return patch;
+		return this.patch;
+	}
+	
+	public String getQualifier() {
+		return this.qualifier;
+	}
+	
+	public String getPrerelease() {
+		return this.getQualifier();
+	}
+	
+	public String getMetadata() {
+		return this.metadata;
 	}
 		
 	public boolean equals(Object object) {
@@ -34,11 +54,11 @@ public class Version {
 	}
 
 	public boolean equals(String version) {
-		return this.compare(version) == 0;
+		return this.toString().equals(version);
 	}
 
 	public boolean equals(Version version) {
-		return this.compare(version) == 0;
+		return this.equals(version.toString());
 	}
 	
 	public int compare(String version) {
@@ -49,6 +69,8 @@ public class Version {
 		if (this.major != version.major) return this.major > version.major ? 1 : -1;
 		if (this.minor != version.minor) return this.minor > version.minor ? 1 : -1;
 		if (this.patch != version.patch) return this.patch > version.patch ? 1 : -1;
+		if (this.qualifier.equals("") == true && version.qualifier.equals("") == false) return 1;
+		if (this.qualifier.equals("") == false && version.qualifier.equals("") == true) return -1;
 		return 0;
 	}
 	
@@ -69,16 +91,14 @@ public class Version {
 	}
 	
 	public String toString() {
-		return this.major + "." + this.minor + "." + this.patch;
+		return this.major + "." + this.minor + "." + this.patch + 
+			(this.qualifier.equals("") == false ? "-" + this.qualifier : "") + 
+			(this.metadata.equals("") == false ? "+" + this.metadata : "");
 	}
-	
-//	public static Version getVersion() {
-//		return parse(load("version.properties"));
-//	}
 	
 	public static Version parse(String text) {
 		Version version = new Version();
-		String[] tokens = text.split("\\.");
+		String[] tokens = text.split("\\.|\\-|\\+");
 		
 		if (tokens.length > 0)
 			version.major = integer(tokens[0], 0);
@@ -86,9 +106,15 @@ public class Version {
 		if (tokens.length > 1)
 			version.minor = integer(tokens[1], 0);
 		
-		if (tokens.length > 2)
+		if (tokens.length > 2) 
 			version.patch = integer(tokens[2], 0);
-
+		
+		if (tokens.length > 3 && text.contains("-"))
+			version.qualifier = tokens[3];
+		
+		if (tokens.length > 4 || (tokens.length > 3 && text.contains("+")))
+			version.metadata = tokens[tokens.length - 1];
+			
 		return version;
 	}
 	
