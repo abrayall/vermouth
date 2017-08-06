@@ -214,6 +214,24 @@ public class Version {
 	}	
 	
 	
+	public Properties properties() {
+		Properties properties = new Properties();
+		properties.setProperty("major", new Integer(this.major).toString());
+		properties.setProperty("minor", new Integer(this.minor).toString());
+		properties.setProperty("patch", new Integer(this.patch).toString());
+		
+		if (this.metadata.equals("") == false)
+			properties.setProperty("metadata", this.metadata);
+		
+		if (this.qualifier.equals("") == false) {
+			properties.setProperty("qualifier", this.qualifier);
+			properties.setProperty("prerelease", this.qualifier);
+		}
+		
+		return properties;
+	}
+	
+	
 	/**
 	 * Searches for version.properties files in current directory and classpath and returns version object representing the one found
 	 * @return a version object representing the version.properties found and null if nothing was found
@@ -342,7 +360,6 @@ public class Version {
 	public static Version load(InputStream input) throws Exception {
 		return parse(properties(input));
 	}	
-	
 	
 	
 	/**

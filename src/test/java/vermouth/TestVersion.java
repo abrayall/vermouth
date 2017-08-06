@@ -11,6 +11,7 @@ public class TestVersion {
 		testMetadataVersions();
 		testComplexVersions();
 		testLoad();
+		testProperties();
 	}
 	
 	public static void testSimpleVersions() throws Exception {
@@ -156,5 +157,15 @@ public class TestVersion {
 		
 		properties.remove("version.qualifier");
 		Assert.equals("2.22.42+build8", Version.parse(properties).toString());
+	}
+	
+	public static void testProperties() throws Exception {
+		Properties properties = Version.parse("11.101.1201-beta1+build2").properties();
+		Assert.equals("11", properties.getProperty("major"));
+		Assert.equals("101", properties.getProperty("minor"));
+		Assert.equals("1201", properties.getProperty("patch"));
+		Assert.equals("beta1", properties.getProperty("qualifier"));
+		Assert.equals("beta1", properties.getProperty("prerelease"));
+		Assert.equals("build2", properties.getProperty("metadata"));
 	}
 }
