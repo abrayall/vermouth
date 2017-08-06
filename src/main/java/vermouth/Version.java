@@ -214,6 +214,10 @@ public class Version {
 	}	
 	
 	
+	/**
+	 * Gets a properties object that represents the current version
+	 * @return a properties object containing the values that represent the current version
+	 */
 	public Properties properties() {
 		Properties properties = new Properties();
 		properties.setProperty("major", new Integer(this.major).toString());
