@@ -4,9 +4,9 @@
 [Semantic Versioning](http://semver.org) Library for Java
 
 ## Schedule
-  - [x] v0.1.0 - Support for versions with major, minor and patch numbers
+  - [x] - Support for versions with major, minor and patch numbers
   - [x] v0.2.0 - Support for version with pre-release and metadata information
-  - [ ] v0.3.0 - Support for versions stored in properties files
+  - [x] v0.3.0 - Support for versions stored in properties files
   - [ ] v0.4.0 - Support for versions stored in json files
   - [ ] v0.5.0 - Maven support
   - [ ] v0.6.0 - Gradle support
