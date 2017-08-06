@@ -48,8 +48,8 @@ public class Version {
 		this.major = major;
 		this.minor = minor;
 		this.patch = patch;
-		this.qualifier = qualifier;
-		this.metadata = metadata;
+		this.qualifier = (qualifier != null ? qualifier : "");
+		this.metadata = (metadata != null ? metadata : "");
 	}
 	
 	
