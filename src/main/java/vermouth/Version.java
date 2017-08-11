@@ -159,7 +159,7 @@ public class Version {
 		if (this.patch != version.patch) return this.patch > version.patch ? 1 : -1;
 		if (this.qualifier.equals("") == true && version.qualifier.equals("") == false) return 1;
 		if (this.qualifier.equals("") == false && version.qualifier.equals("") == true) return -1;
-		return 0;
+		return this.compare(this.qualifier.split("\\."), version.qualifier.split("\\."));
 	}
 	
 	
@@ -287,21 +287,22 @@ public class Version {
 	 */
 	public static Version parse(String text) {
 		Version version = new Version();
-		String[] tokens = text.split("\\.|\\-|\\+");
+		String[] tokens = text.trim().split("\\-|\\+");
+		String[] numbers = tokens[0].split("\\.");
 		
-		if (tokens.length > 0)
-			version.major = integer(tokens[0], 0);
+		if (numbers.length > 0)
+			version.major = integer(numbers[0], 0);
 		
-		if (tokens.length > 1)
-			version.minor = integer(tokens[1], 0);
+		if (numbers.length > 1)
+			version.minor = integer(numbers[1], 0);
 		
-		if (tokens.length > 2) 
-			version.patch = integer(tokens[2], 0);
+		if (numbers.length > 2) 
+			version.patch = integer(numbers[2], 0);
 		
-		if (tokens.length > 3 && text.contains("-"))
-			version.qualifier = tokens[3];
+		if (tokens.length > 1 && text.contains("-"))
+			version.qualifier = tokens[1];
 		
-		if (tokens.length > 4 || (tokens.length > 3 && text.contains("+")))
+		if (tokens.length > 2 || (tokens.length > 1 && text.contains("+")))
 			version.metadata = tokens[tokens.length - 1];
 			
 		return version;
@@ -404,6 +405,27 @@ public class Version {
 	
 	
 	/**
+	 * Determines which version of the two given versions is greater
+	 * @param base the base version to compare
+	 * @param other the other version to compare
+	 * @return the greater of the two versions or base if they are equal
+	 */
+	public static Version greater(Version base, Version other) {
+		return other.isGreater(base) ? other : base;
+	}
+	
+	
+	/**
+	 * Determines which version of the two given versions is lesser
+	 * @param base the base version to compare
+	 * @param other the other version to compare
+	 * @return the lesser of the two versions or base if they are equal
+	 */
+	public static Version lesser(Version base, Version other) {
+		return other.isLesser(base) ? other : base;
+	}
+	
+	/**
 	 * Loads properties from a given inputstream
 	 * @param inputStream the inputstream that the properties should be loaded from
 	 * @return a Properties object loaded with property values from the inputstream
@@ -464,8 +486,7 @@ public class Version {
 	 * @return the Class representing the code that call the current method
 	 * @throws Exception if an error is encountered while determining calling class
 	 */
-	protected static Class<?>
-	getCallingClass() throws Exception {
+	protected static Class<?> getCallingClass() throws Exception {
         StackTraceElement[] elements = Thread.currentThread().getStackTrace();
         for (int i=1; i< elements.length; i++) {
             StackTraceElement element = elements[i];
@@ -476,7 +497,33 @@ public class Version {
         return Version.class;
 	}
 	
+	protected Integer compare(String[] base, String[] other) {
+		if (base.length == 0 && other.length > 0) return 1;
+		if (base.length > 0 && other.length == 0) return -1;
+				
+		for (int i = 0; i < Math.min(base.length, other.length); i++) {
+			int compared = compare(base[i], other[i]);
+			if (compared != 0)
+				return compared;
+		}
+		
+		if (base.length > 0 && other.length > 0 && base.length != other.length) return (base.length > other.length) ? 1 : -1;
+		return 0;
+	}
 	
+	protected Integer compare(String base, String other) {
+		if (base.matches("[0-9]+") && other.matches("[0-9]+") == false) return -1;
+		if (base.matches("[0-9]+") == false && other.matches("[0-9]+")) return 1;
+		if (base.matches("[0-9]+") && other.matches("[0-9]+")) return new Integer(integer(base, 0)).compareTo(integer(other, 0));
+		
+		int compared = base.compareTo(other);
+		if (compared == 0)
+			return 0;
+		
+		return compared > 0 ? 1 : -1;
+	}
+	
+		
 	/**
 	 * Parse an integer from a given string
 	 * @param value the string containing the integer value that should be parsed
@@ -517,4 +564,3 @@ public class Version {
 		return "";
 	}
 }
-

@@ -92,6 +92,18 @@ public class TestVersion {
 	}
 	
 	public static void testComplexVersions() throws Exception {
+		
+		Version[] versions = new Version[] { Version.parse("1.0.0-alpha"), Version.parse("1.0.0-alpha.1"), Version.parse("1.0.0-alpha.beta"),  Version.parse("1.0.0-beta"),  Version.parse("1.0.0-beta.2"),  Version.parse("1.0.0-beta.11"),  Version.parse("1.0.0-rc.1"),  Version.parse("1.0.0") };
+		for (int i = 0; i < versions.length; i++) {
+			if (i == 0) continue;
+			Assert.equals(true, versions[i].isGreater(versions[i - 1]));
+			Assert.equals(false, versions[i].isLesser(versions[i - 1]));
+			Assert.equals(true, versions[i - 1].isLesser(versions[i]));
+			Assert.equals(false, versions[i - 1].isGreater(versions[i]));
+			Assert.equals(versions[i].toString(), Version.greater(versions[i], versions[i -1]).toString());
+			Assert.equals(versions[i - 1].toString(), Version.lesser(versions[i], versions[i -1]).toString());
+		}
+		
 		Version version = Version.parse("2.1111.994-beta2+build16");
 		Assert.equals(2, version.getMajor());
 		Assert.equals(1111, version.getMinor());
@@ -102,7 +114,7 @@ public class TestVersion {
 		Assert.equals(true, version.isGreater("1.10.500"));
 		Assert.equals(false, version.isGreater(Version.parse("3.10.501")));
 		Assert.equals(false, version.isGreater("2.1111.994"));
-		Assert.equals(false, version.isGreater("2.1111.994-beta1"));
+		Assert.equals(true, version.isGreater("2.1111.994-beta1"));
 		Assert.equals(false, version.isGreater("2.1111.994+build1"));
 		Assert.equals(false, version.isGreater("2.1111.994-beta4+build1"));
 		
@@ -110,13 +122,13 @@ public class TestVersion {
 		Assert.equals(false, version.isLesser(Version.parse("1.112.1200")));
 		Assert.equals(true, version.isLesser("2.1111.994"));
 		Assert.equals(false, version.isLesser("2.1111.994-beta1"));
-		Assert.equals(false, version.isLesser("2.1111.994-build1"));
+		Assert.equals(true, version.isLesser("2.1111.994-build1"));
 		
 		Assert.equals(version, version);
 		Assert.equals(false, version.equals(new Version(2, 1111, 994)));
 		Assert.equals(false, version.equals("2.1111.994"));
 		Assert.equals(false, version.equals("2.1111.994-beta1"));
-		Assert.equals(false, version.equals(10));
+		Assert.equals(false, version.equals(10));	
 	}
 	
 	public static void testLoad() throws Exception {
