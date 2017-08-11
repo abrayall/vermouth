@@ -219,20 +219,7 @@ public class Version {
 	 * @return a properties object containing the values that represent the current version
 	 */
 	public Properties properties() {
-		Properties properties = new Properties();
-		properties.setProperty("major", new Integer(this.major).toString());
-		properties.setProperty("minor", new Integer(this.minor).toString());
-		properties.setProperty("patch", new Integer(this.patch).toString());
-		
-		if (this.metadata.equals("") == false)
-			properties.setProperty("metadata", this.metadata);
-		
-		if (this.qualifier.equals("") == false) {
-			properties.setProperty("qualifier", this.qualifier);
-			properties.setProperty("prerelease", this.qualifier);
-		}
-		
-		return properties;
+		return new vermouth.properties.Serializer().properties(this);
 	}
 	
 	
@@ -315,15 +302,10 @@ public class Version {
 	 * @return the version object that represents the version contained in the given properties object
 	 */
 	public static Version parse(Properties properties) {
-		return parse(
-			get(properties, "major", "0") + "." + 
-			get(properties, "minor", "0") + "." + 
-			get(properties, "patch", "0") + 
-			valid(get(properties, "qualifier", get(properties, "prerelease", "")), "-") + 
-			valid(get(properties, "metadata", ""), "+")
-		);			
+		return new vermouth.properties.Parser().parse(properties);	
 	}
 
+	
 	/**
 	 * Loads a version from a given properties file name from the filesystem (if file exists) and/or the classpath
 	 * @param name the name of the properties file
@@ -363,7 +345,7 @@ public class Version {
 	 * @throws Exception if an error is encountered while reading from the inputstream
 	 */
 	public static Version load(InputStream input) throws Exception {
-		return parse(properties(input));
+		return new vermouth.properties.Parser().parse(input);
 	}	
 	
 	
@@ -375,7 +357,7 @@ public class Version {
 	 * @throws Exception if an error is encountered while storing
 	 */
 	public static Version store(Version version, OutputStream output) throws Exception {
-		version.properties().store(output, "");
+		new vermouth.properties.Serializer().serialize(version, output);
 		return version;
 	}
 	
@@ -423,24 +405,6 @@ public class Version {
 	 */
 	public static Version lesser(Version base, Version other) {
 		return other.isLesser(base) ? other : base;
-	}
-	
-	/**
-	 * Loads properties from a given inputstream
-	 * @param inputStream the inputstream that the properties should be loaded from
-	 * @return a Properties object loaded with property values from the inputstream
-	 * @throws Exception if an error is encountered while reading from the inputstream
-	 */
-	protected static Properties properties(InputStream inputStream) throws Exception {
-		Properties properties = new Properties();
-		try {
-			properties.load(inputStream);
-		} catch(Exception e) {} 
-		finally {
-			if (inputStream != null) inputStream.close();
-		}
-				
-		return properties;
 	}
 	
 	
@@ -550,31 +514,5 @@ public class Version {
 		} catch (Exception e) {
 			return defaultValue;
 		}
-	}
-	
-
-	/**
-	 * Gets a property from a given properties object
-	 * @param properties the properties object that should be used to look up the property
-	 * @param property the name of the property that should be looked up (if the property does not exist, "version." + property will also be tried)
-	 * @param defaultValue the value that should be returned if the property or "version" + property does not exist in the given properties object
-	 * @return the value of the property (or "version." + property) if it exists in the given properties object or the given default value if not
-	 */
-	private static String get(Properties properties, String property, String defaultValue) {
-		return properties.getProperty(property, properties.getProperty("version." + property, defaultValue));
-	}
-	
-	
-	/**
-	 * Checks if a given value is valid (not null and not blank)
-	 * @param value the value that should be checked
-	 * @param prefix the prefix that should prepended to the value if is valid
-	 * @return the prefix and value if the value if valid and blank if not
-	 */
-	private static String valid(String value, String prefix) {
-		if (value != null && value.equals("") == false)
-			return prefix + value;
-		
-		return "";
 	}
 }
