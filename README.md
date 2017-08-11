@@ -24,7 +24,7 @@
   - [x] v0.1.0 - Support for versions with major, minor and patch numbers
   - [x] v0.2.0 - Support for version with pre-release and metadata information
   - [x] [v0.3.0](https://github.com/abrayall/vermouth/releases/download/v0.3.1/vermouth-0.3.1.jar) - Support for loading versions from properties files
-  - [x] v0.4.0 - Support for storing version in properties files
+  - [x] [v0.4.0](https://github.com/abrayall/vermouth/releases/download/v4.0.0/vermouth-4.0.0.jar) - Support for storing version in properties files
   - [ ] v0.5.0 - Maven support
   - [ ] v0.6.0 - Gradle support
   - [ ] v0.7.0 - Ant support
