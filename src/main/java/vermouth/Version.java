@@ -226,10 +226,9 @@ public class Version {
 	/**
 	 * Searches for version.properties files in current directory and classpath and returns version object representing the one found
 	 * @return a version object representing the version.properties found and null if nothing was found
-	 * @throws Exception if an error is encountered while loading version.properties
 	 */
 	public static Version getVersion() throws Exception {
-		return getVersion(getCallingClass());
+		return getVersion("0.0.0");
 	}
 	
 	
@@ -240,7 +239,7 @@ public class Version {
 	 */
 	public static Version getVersion(String defaultValue) {
 		try {
-			return getVersion();
+			return getVersion(getCallingClass());
 		} catch (Exception e) {
 			return Version.parse(defaultValue);
 		}
