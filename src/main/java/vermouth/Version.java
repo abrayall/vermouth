@@ -497,6 +497,13 @@ public class Version {
         return Version.class;
 	}
 	
+	
+	/**
+	 * Compares to arrays of strings that represent the qualifier of a two versions
+	 * @param base the array of strings representing the qualifier of the base version
+	 * @param other the array of string representing the qaulifier of the othe version
+	 * @return an integer where 1 means the current version is greater than given version, -1 means the given version is greater, and 0 if they are equal
+	 */
 	protected Integer compare(String[] base, String[] other) {
 		if (base.length == 0 && other.length > 0) return 1;
 		if (base.length > 0 && other.length == 0) return -1;
@@ -511,6 +518,13 @@ public class Version {
 		return 0;
 	}
 	
+	
+	/**
+	 * Compares the segments of qualifiers from two version
+	 * @param base a segment of the qualifier from the base verison
+	 * @param other the corresponding segment of the qualifier from the othe version
+	 * @return an integer where 1 means the current version is greater than given version, -1 means the given version is greater, and 0 if they are equal
+	 */
 	protected Integer compare(String base, String other) {
 		if (base.matches("[0-9]+") && other.matches("[0-9]+") == false) return -1;
 		if (base.matches("[0-9]+") == false && other.matches("[0-9]+")) return 1;
