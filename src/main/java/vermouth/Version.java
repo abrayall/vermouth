@@ -227,7 +227,7 @@ public class Version {
 	 * Searches for version.properties files in current directory and classpath and returns version object representing the one found
 	 * @return a version object representing the version.properties found and null if nothing was found
 	 */
-	public static Version getVersion() throws Exception {
+	public static Version getVersion() {
 		return getVersion("0.0.0");
 	}
 	
