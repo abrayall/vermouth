@@ -3,8 +3,36 @@
 
 param(
     [string]$timestamp = "yyyyMMddHHmmss",
-    [string]$metadata = ""
+    [string]$metadata = "",
+    [string]$default = "0.0.1",
+    [string]$pattern = "v*.*.*",
+    [switch]$help
 )
+
+# Help function
+function Show-Help {
+    Write-Host "vermouth - Semantic version detection from git tags"
+    Write-Host ""
+    Write-Host "Usage: vermouth.ps1 [options]"
+    Write-Host ""
+    Write-Host "Options:"
+    Write-Host "  -help                  Show this help message"
+    Write-Host "  -timestamp FORMAT      Timestamp format (default: YYYYMMddHHmmss)"
+    Write-Host "  -metadata VALUE        Append build metadata with +"
+    Write-Host "  -default VERSION       Default version if none found (default: 0.0.1)"
+    Write-Host "  -pattern PATTERN       Git tag pattern to match (default: v*.*.*)"
+    Write-Host ""
+    Write-Host "Examples:"
+    Write-Host "  .\vermouth.ps1"
+    Write-Host "  .\vermouth.ps1 -default 1.0.0"
+    Write-Host "  .\vermouth.ps1 -timestamp YYYY-MM-dd -metadata build123"
+    Write-Host "  .\vermouth.ps1 -pattern `"*.*.*`""
+}
+
+if ($help) {
+    Show-Help
+    exit 0
+}
 
 # Convert human-readable format to .NET format
 $timestampFormat = $timestamp `
@@ -19,9 +47,9 @@ $timestampFormat = $timestamp `
 $ErrorActionPreference = "SilentlyContinue"
 
 # Get version from git describe
-$gitDescribe = git describe --tags --match "v*.*.*" 2>$null
+$gitDescribe = git describe --tags --match $pattern 2>$null
 if (-not $gitDescribe) {
-    $gitDescribe = "v0.0.1"
+    $gitDescribe = "v$default"
 }
 
 # Parse git describe output
@@ -46,7 +74,7 @@ if ($gitDescribe -match $pattern) {
         $version = "$version-$commitCount"
     }
 } else {
-    $version = "0.0.1"
+    $version = $default
 }
 
 # Check for uncommitted local changes

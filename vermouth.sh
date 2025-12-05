@@ -8,10 +8,36 @@ set -e
 # Default values
 TIMESTAMP_FORMAT="%Y%m%d%H%M%S"
 METADATA=""
+DEFAULT_VERSION="0.0.1"
+PATTERN="v*.*.*"
+
+# Help function
+show_help() {
+    echo "vermouth - Semantic version detection from git tags"
+    echo ""
+    echo "Usage: vermouth.sh [options]"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help             Show this help message"
+    echo "  --timestamp=FORMAT     Timestamp format (default: YYYYMMddHHmmss)"
+    echo "  --metadata=VALUE       Append build metadata with +"
+    echo "  --default=VERSION      Default version if none found (default: 0.0.1)"
+    echo "  --pattern=PATTERN      Git tag pattern to match (default: v*.*.*)"
+    echo ""
+    echo "Examples:"
+    echo "  vermouth.sh"
+    echo "  vermouth.sh --default=1.0.0"
+    echo "  vermouth.sh --timestamp=YYYY-MM-dd --metadata=build123"
+    echo "  vermouth.sh --pattern=\"*.*.*\""
+}
 
 # Parse arguments
 for arg in "$@"; do
     case "$arg" in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
         --timestamp=*)
             TIMESTAMP_FORMAT="${arg#--timestamp=}"
             # Convert human-readable format to date format
@@ -27,17 +53,23 @@ for arg in "$@"; do
         --metadata=*)
             METADATA="${arg#--metadata=}"
             ;;
+        --default=*)
+            DEFAULT_VERSION="${arg#--default=}"
+            ;;
+        --pattern=*)
+            PATTERN="${arg#--pattern=}"
+            ;;
     esac
 done
 
 # Get version from git describe
-GIT_DESCRIBE=$(git describe --tags --match "v*.*.*" 2>/dev/null || echo "v0.0.1")
+GIT_DESCRIBE=$(git describe --tags --match "$PATTERN" 2>/dev/null || echo "v${DEFAULT_VERSION}")
 
 # Remove 'v' prefix
 GIT_DESCRIBE="${GIT_DESCRIBE#v}"
 
 # Default version
-VERSION="0.0.1"
+VERSION="$DEFAULT_VERSION"
 
 # Parse git describe output
 # Format: 0.1.0, 0.1.0-beta1, 0.1.0-5-g1a2b3c4, or 0.1.0-beta1-5-g1a2b3c4

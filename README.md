@@ -49,6 +49,8 @@ This downloads and executes the script in a single command - no root access or f
 -v, --version          Show vermouth version
 --timestamp=FORMAT     Timestamp format (default: YYYYMMddHHmmss)
 --metadata=VALUE       Append build metadata with +
+--default=VERSION      Default version if none found (default: 0.0.1)
+--pattern=PATTERN      Git tag pattern to match (default: v*.*.*)
 ```
 
 ### Examples
@@ -73,6 +75,22 @@ vermouth --metadata=build.123
 # Combine timestamp and metadata
 vermouth --metadata=ci
 # Output: 1.2.3-20251205143022+ci
+
+# Custom default version (when no tags exist)
+vermouth --default=1.0.0
+# Output: 1.0.0-20251205143022
+
+# Use "dev" as default
+vermouth --default=dev
+# Output: dev-20251205143022
+
+# Match tags without 'v' prefix
+vermouth --pattern="*.*.*"
+# Output: 1.2.3
+
+# Match release tags only (e.g., release/1.0.0)
+vermouth --pattern="release/*"
+# Output: 1.0.0
 ```
 
 ## Version Detection
@@ -260,7 +278,6 @@ $VERSION = $(vermouth 2>$null) ?? (iex (iwr -Uri "https://raw.githubusercontent.
 
 ## Future Work
 
-- **Default version support** - Allow specifying a default version via `--default` flag when no git tags exist
 - **Version management** - Add commands to increment versions (`vermouth bump major|minor|patch`) and create git tags
 
 ## License
