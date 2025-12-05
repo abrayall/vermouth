@@ -232,6 +232,32 @@ release:
 	@echo "Building version $(VERSION)"
 ```
 
+### Windows Batch (With Fallback)
+
+```batch
+for /f "tokens=*" %%i in ('vermouth 2^>nul') do set "VERSION=%%i"
+if not defined VERSION (
+    curl -sfL https://raw.githubusercontent.com/abrayall/vermouth/refs/heads/main/vermouth.bat -o %TEMP%\vermouth.bat
+    for /f "tokens=*" %%i in ('%TEMP%\vermouth.bat') do set "VERSION=%%i"
+)
+echo %VERSION%
+```
+
+### PowerShell (With Fallback)
+
+```powershell
+$VERSION = $(vermouth 2>$null)
+if (-not $VERSION) {
+    $VERSION = Invoke-Expression (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/abrayall/vermouth/refs/heads/main/vermouth.ps1" -UseBasicParsing).Content
+}
+```
+
+Or as a one-liner (PowerShell 7+):
+
+```powershell
+$VERSION = $(vermouth 2>$null) ?? (iex (iwr -Uri "https://raw.githubusercontent.com/abrayall/vermouth/refs/heads/main/vermouth.ps1" -UseBasicParsing).Content)
+```
+
 ## Future Work
 
 - **Default version support** - Allow specifying a default version via `--default` flag when no git tags exist
