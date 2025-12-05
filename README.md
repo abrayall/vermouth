@@ -32,6 +32,16 @@ Simply run `vermouth` in any git repository to get the current semantic version:
 vermouth
 ```
 
+### Quick Run (No Installation)
+
+Run vermouth directly without installing:
+
+```bash
+curl -sfL https://raw.githubusercontent.com/abrayall/vermouth/refs/heads/main/vermouth.sh | sh -
+```
+
+This downloads and executes the script in a single command - no root access or file storage required.
+
 ### Options
 
 ```
@@ -159,6 +169,16 @@ VERSION=$(vermouth)
 go build -ldflags "-X main.Version=${VERSION}" -o myapp .
 ```
 
+### Build Scripts (With Fallback)
+
+Try the installed binary first, fallback to curl if not installed:
+
+```bash
+#!/bin/bash
+VERSION=$(vermouth || curl -sfL https://raw.githubusercontent.com/abrayall/vermouth/refs/heads/main/vermouth.sh | sh -)
+go build -ldflags "-X main.Version=${VERSION}" -o myapp .
+```
+
 ### CI/CD Pipelines
 
 ```yaml
@@ -171,12 +191,45 @@ go build -ldflags "-X main.Version=${VERSION}" -o myapp .
   run: docker build -t myapp:${{ steps.version.outputs.version }} .
 ```
 
+### CI/CD Pipelines (With Fallback)
+
+```yaml
+# GitHub Actions - try binary, fallback to curl
+- name: Get version
+  id: version
+  run: |
+    VERSION=$(vermouth || curl -sfL https://raw.githubusercontent.com/abrayall/vermouth/refs/heads/main/vermouth.sh | sh -)
+    echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+- name: Build
+  run: docker build -t myapp:${{ steps.version.outputs.version }} .
+```
+
 ### Package Publishing
 
 ```bash
 VERSION=$(vermouth)
 npm version $VERSION --no-git-tag-version
 npm publish
+```
+
+### Docker Build with Version
+
+```bash
+VERSION=$(vermouth || curl -sfL https://raw.githubusercontent.com/abrayall/vermouth/refs/heads/main/vermouth.sh | sh -)
+docker build --build-arg VERSION=$VERSION -t myapp:$VERSION .
+```
+
+### Makefile Integration
+
+```makefile
+VERSION := $(shell vermouth || curl -sfL https://raw.githubusercontent.com/abrayall/vermouth/refs/heads/main/vermouth.sh | sh -)
+
+build:
+	go build -ldflags "-X main.Version=$(VERSION)" -o myapp .
+
+release:
+	@echo "Building version $(VERSION)"
 ```
 
 ## Future Work
