@@ -1,6 +1,21 @@
 # Vermouth - Semantic version detection from git tags
 # Determines the current semantic version of a git repository based on tags.
 
+param(
+    [string]$timestamp = "yyyyMMddHHmmss",
+    [string]$metadata = ""
+)
+
+# Convert human-readable format to .NET format
+$timestampFormat = $timestamp `
+    -replace "YYYY", "yyyy" `
+    -replace "YY", "yy" `
+    -replace "MM", "MM" `
+    -replace "dd", "dd" `
+    -replace "HH", "HH" `
+    -replace "mm", "mm" `
+    -replace "ss", "ss"
+
 $ErrorActionPreference = "SilentlyContinue"
 
 # Get version from git describe
@@ -38,8 +53,13 @@ if ($gitDescribe -match $pattern) {
 $ErrorActionPreference = "SilentlyContinue"
 $status = git status --porcelain 2>$null
 if ($status) {
-    $timestamp = Get-Date -Format "yyyyMMddHHmmss"
-    $version = "$version-$timestamp"
+    $ts = Get-Date -Format $timestampFormat
+    $version = "$version-$ts"
+}
+
+# Append metadata if provided
+if ($metadata) {
+    $version = "$version+$metadata"
 }
 
 Write-Output $version

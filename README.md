@@ -157,7 +157,7 @@ Vermouth also includes shell scripts for environments where the Go binary isn't 
 - `vermouth.ps1` - PowerShell script (Windows)
 - `vermouth.bat` - Batch script (Windows)
 
-These scripts provide the same core version detection but don't support the `--timestamp` and `--metadata` options.
+These scripts provide the same version detection and support the `--timestamp` and `--metadata` options.
 
 ## Use Cases
 
@@ -261,7 +261,6 @@ $VERSION = $(vermouth 2>$null) ?? (iex (iwr -Uri "https://raw.githubusercontent.
 ## Future Work
 
 - **Default version support** - Allow specifying a default version via `--default` flag when no git tags exist
-- **Full parameter support in shell implementations** - Add `--timestamp` and `--metadata` options to `vermouth.sh`, `vermouth.ps1`, and `vermouth.bat`
 - **Version management** - Add commands to increment versions (`vermouth bump major|minor|patch`) and create git tags
 
 ## License

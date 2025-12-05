@@ -5,6 +5,31 @@
 
 set -e
 
+# Default values
+TIMESTAMP_FORMAT="%Y%m%d%H%M%S"
+METADATA=""
+
+# Parse arguments
+for arg in "$@"; do
+    case "$arg" in
+        --timestamp=*)
+            TIMESTAMP_FORMAT="${arg#--timestamp=}"
+            # Convert human-readable format to date format
+            TIMESTAMP_FORMAT=$(echo "$TIMESTAMP_FORMAT" | sed \
+                -e 's/YYYY/%Y/g' \
+                -e 's/YY/%y/g' \
+                -e 's/MM/%m/g' \
+                -e 's/dd/%d/g' \
+                -e 's/HH/%H/g' \
+                -e 's/mm/%M/g' \
+                -e 's/ss/%S/g')
+            ;;
+        --metadata=*)
+            METADATA="${arg#--metadata=}"
+            ;;
+    esac
+done
+
 # Get version from git describe
 GIT_DESCRIBE=$(git describe --tags --match "v*.*.*" 2>/dev/null || echo "v0.0.1")
 
@@ -57,8 +82,13 @@ esac
 
 # Check for uncommitted local changes
 if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
-    TIMESTAMP=$(date +"%Y%m%d%H%M%S")
+    TIMESTAMP=$(date +"$TIMESTAMP_FORMAT")
     VERSION="${VERSION}-${TIMESTAMP}"
+fi
+
+# Append metadata if provided
+if [ -n "$METADATA" ]; then
+    VERSION="${VERSION}+${METADATA}"
 fi
 
 echo "$VERSION"
