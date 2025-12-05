@@ -10,6 +10,7 @@ TIMESTAMP_FORMAT="%Y%m%d%H%M%S"
 METADATA=""
 DEFAULT_VERSION="0.0.1"
 PATTERN="v*.*.*"
+FORMAT="{version+}"
 
 # Help function
 show_help() {
@@ -20,15 +21,28 @@ show_help() {
     echo "Options:"
     echo "  -h, --help             Show this help message"
     echo "  --timestamp=FORMAT     Timestamp format (default: YYYYMMddHHmmss)"
-    echo "  --metadata=VALUE       Append build metadata with +"
+    echo "  --metadata=VALUE       Sets the metadata part of the version"
     echo "  --default=VERSION      Default version if none found (default: 0.0.1)"
     echo "  --pattern=PATTERN      Git tag pattern to match (default: v*.*.*)"
+    echo "  --format=FORMAT        Output format (default: {version+})"
+    echo ""
+    echo "Format placeholders:"
+    echo "  {major}       Major version number"
+    echo "  {minor}       Minor version number"
+    echo "  {patch}       Patch version number"
+    echo "  {version}     {major}.{minor}.{patch}"
+    echo "  {prerelease}  Pre-release identifier (e.g., beta1)"
+    echo "  {commits}     Commits since tag"
+    echo "  {timestamp}   Timestamp for uncommitted changes"
+    echo "  {metadata}    Build metadata"
+    echo "  {version+}    Full version: {version}-{prerelease}-{commits}-{timestamp}+{metadata}"
     echo ""
     echo "Examples:"
     echo "  vermouth.sh"
     echo "  vermouth.sh --default=1.0.0"
     echo "  vermouth.sh --timestamp=YYYY-MM-dd --metadata=build123"
     echo "  vermouth.sh --pattern=\"*.*.*\""
+    echo "  vermouth.sh --format=\"v{version}\""
 }
 
 # Parse arguments
@@ -59,6 +73,9 @@ for arg in "$@"; do
         --pattern=*)
             PATTERN="${arg#--pattern=}"
             ;;
+        --format=*)
+            FORMAT="${arg#--format=}"
+            ;;
     esac
 done
 
@@ -68,8 +85,13 @@ GIT_DESCRIBE=$(git describe --tags --match "$PATTERN" 2>/dev/null || echo "v${DE
 # Remove 'v' prefix
 GIT_DESCRIBE="${GIT_DESCRIBE#v}"
 
-# Default version
-VERSION="$DEFAULT_VERSION"
+# Initialize version components
+MAJOR=""
+MINOR=""
+PATCH=""
+PRERELEASE=""
+COMMITS=""
+TIMESTAMP=""
 
 # Parse git describe output
 # Format: 0.1.0, 0.1.0-beta1, 0.1.0-5-g1a2b3c4, or 0.1.0-beta1-5-g1a2b3c4
@@ -78,10 +100,12 @@ case "$GIT_DESCRIBE" in
     [0-9]*.[0-9]*.[0-9]*)
         # Extract base version (X.Y.Z)
         BASE=$(echo "$GIT_DESCRIBE" | sed 's/^\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/')
+        MAJOR=$(echo "$BASE" | cut -d. -f1)
+        MINOR=$(echo "$BASE" | cut -d. -f2)
+        PATCH=$(echo "$BASE" | cut -d. -f3)
+
         REST="${GIT_DESCRIBE#$BASE}"
         REST="${REST#-}"
-
-        VERSION="$BASE"
 
         if [ -n "$REST" ]; then
             # Check if REST starts with a letter (prerelease) or number (commit count)
@@ -93,34 +117,66 @@ case "$GIT_DESCRIBE" in
                         *-[0-9]*-g[0-9a-f]*)
                             # prerelease-commits-hash: extract prerelease and commit count
                             PRERELEASE=$(echo "$REST" | sed 's/\(.*\)-[0-9]*-g[0-9a-f]*$/\1/')
-                            COMMIT_COUNT=$(echo "$REST" | sed 's/.*-\([0-9]*\)-g[0-9a-f]*$/\1/')
-                            VERSION="${VERSION}-${PRERELEASE}-${COMMIT_COUNT}"
+                            COMMITS=$(echo "$REST" | sed 's/.*-\([0-9]*\)-g[0-9a-f]*$/\1/')
                             ;;
                         *)
                             # Just prerelease, no commits after
-                            VERSION="${VERSION}-${REST}"
+                            PRERELEASE="$REST"
                             ;;
                     esac
                     ;;
                 [0-9]*-g[0-9a-f]*)
                     # No prerelease, just commits-hash: 5-gabc123
-                    COMMIT_COUNT=$(echo "$REST" | sed 's/\([0-9]*\)-g[0-9a-f]*$/\1/')
-                    VERSION="${VERSION}-${COMMIT_COUNT}"
+                    COMMITS=$(echo "$REST" | sed 's/\([0-9]*\)-g[0-9a-f]*$/\1/')
                     ;;
             esac
         fi
+        ;;
+    *)
+        # Non-standard default, use as-is
+        MAJOR="$DEFAULT_VERSION"
         ;;
 esac
 
 # Check for uncommitted local changes
 if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
     TIMESTAMP=$(date +"$TIMESTAMP_FORMAT")
-    VERSION="${VERSION}-${TIMESTAMP}"
 fi
 
-# Append metadata if provided
-if [ -n "$METADATA" ]; then
-    VERSION="${VERSION}+${METADATA}"
+# Apply format
+# Expand {version+} shortcut
+OUTPUT=$(echo "$FORMAT" | sed 's/{version+}/{version}-{prerelease}-{commits}-{timestamp}+{metadata}/g')
+
+# Build {version} = major.minor.patch
+if [ -n "$MINOR" ]; then
+    BASE_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+else
+    BASE_VERSION="${MAJOR}"
 fi
 
-echo "$VERSION"
+# Replace all placeholders
+OUTPUT=$(echo "$OUTPUT" | sed \
+    -e "s/{major}/${MAJOR}/g" \
+    -e "s/{minor}/${MINOR}/g" \
+    -e "s/{patch}/${PATCH}/g" \
+    -e "s/{version}/${BASE_VERSION}/g" \
+    -e "s/{prerelease}/${PRERELEASE}/g" \
+    -e "s/{commits}/${COMMITS}/g" \
+    -e "s/{timestamp}/${TIMESTAMP}/g" \
+    -e "s/{metadata}/${METADATA}/g")
+
+# Clean up empty segments - remove separators around empty values
+while true; do
+    PREV="$OUTPUT"
+    OUTPUT=$(echo "$OUTPUT" | sed \
+        -e 's/--/-/g' \
+        -e 's/++/+/g' \
+        -e 's/-+/+/g' \
+        -e 's/+-/-/g')
+    [ "$OUTPUT" = "$PREV" ] && break
+done
+
+# Remove trailing separators
+OUTPUT=$(echo "$OUTPUT" | sed -e 's/[-+]*$//')
+
+echo "$OUTPUT"

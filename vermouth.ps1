@@ -6,6 +6,7 @@ param(
     [string]$metadata = "",
     [string]$default = "0.0.1",
     [string]$pattern = "v*.*.*",
+    [string]$format = "{version+}",
     [switch]$help
 )
 
@@ -18,15 +19,28 @@ function Show-Help {
     Write-Host "Options:"
     Write-Host "  -help                  Show this help message"
     Write-Host "  -timestamp FORMAT      Timestamp format (default: YYYYMMddHHmmss)"
-    Write-Host "  -metadata VALUE        Append build metadata with +"
+    Write-Host "  -metadata VALUE        Sets the metadata part of the version"
     Write-Host "  -default VERSION       Default version if none found (default: 0.0.1)"
     Write-Host "  -pattern PATTERN       Git tag pattern to match (default: v*.*.*)"
+    Write-Host "  -format FORMAT         Output format (default: {version+})"
+    Write-Host ""
+    Write-Host "Format placeholders:"
+    Write-Host "  {major}       Major version number"
+    Write-Host "  {minor}       Minor version number"
+    Write-Host "  {patch}       Patch version number"
+    Write-Host "  {version}     {major}.{minor}.{patch}"
+    Write-Host "  {prerelease}  Pre-release identifier (e.g., beta1)"
+    Write-Host "  {commits}     Commits since tag"
+    Write-Host "  {timestamp}   Timestamp for uncommitted changes"
+    Write-Host "  {metadata}    Build metadata"
+    Write-Host "  {version+}    Full version: {version}-{prerelease}-{commits}-{timestamp}+{metadata}"
     Write-Host ""
     Write-Host "Examples:"
     Write-Host "  .\vermouth.ps1"
     Write-Host "  .\vermouth.ps1 -default 1.0.0"
     Write-Host "  .\vermouth.ps1 -timestamp YYYY-MM-dd -metadata build123"
     Write-Host "  .\vermouth.ps1 -pattern `"*.*.*`""
+    Write-Host "  .\vermouth.ps1 -format `"v{version}`""
 }
 
 if ($help) {
@@ -54,27 +68,25 @@ if (-not $gitDescribe) {
 
 # Parse git describe output
 # Format: v0.1.0, v0.1.0-beta1, v0.1.0-5-g1a2b3c4, or v0.1.0-beta1-5-g1a2b3c4
-$pattern = "^v(\d+)\.(\d+)\.(\d+)(-([a-zA-Z][a-zA-Z0-9.]*))?(-(\d+)-g([0-9a-f]+))?$"
+$versionPattern = "^v(\d+)\.(\d+)\.(\d+)(-([a-zA-Z][a-zA-Z0-9.]*))?(-(\d+)-g([0-9a-f]+))?$"
 
-if ($gitDescribe -match $pattern) {
+# Initialize version components
+$major = ""
+$minor = ""
+$patch = ""
+$prerelease = ""
+$commits = ""
+$ts = ""
+
+if ($gitDescribe -match $versionPattern) {
     $major = $matches[1]
     $minor = $matches[2]
     $patch = $matches[3]
     $prerelease = $matches[5]
-    $commitCount = $matches[7]
-
-    # Build version string
-    if ($prerelease) {
-        $version = "$major.$minor.$patch-$prerelease"
-    } else {
-        $version = "$major.$minor.$patch"
-    }
-
-    if ($commitCount) {
-        $version = "$version-$commitCount"
-    }
+    $commits = $matches[7]
 } else {
-    $version = $default
+    # Non-standard default, use as-is
+    $major = $default
 }
 
 # Check for uncommitted local changes
@@ -82,12 +94,39 @@ $ErrorActionPreference = "SilentlyContinue"
 $status = git status --porcelain 2>$null
 if ($status) {
     $ts = Get-Date -Format $timestampFormat
-    $version = "$version-$ts"
 }
 
-# Append metadata if provided
-if ($metadata) {
-    $version = "$version+$metadata"
+# Apply format
+# Expand {version+} shortcut
+$output = $format -replace '\{version\+\}', '{version}-{prerelease}-{commits}-{timestamp}+{metadata}'
+
+# Build {version} = major.minor.patch
+if ($minor) {
+    $baseVersion = "$major.$minor.$patch"
+} else {
+    $baseVersion = $major
 }
 
-Write-Output $version
+# Replace all placeholders
+$output = $output -replace '\{major\}', $major
+$output = $output -replace '\{minor\}', $minor
+$output = $output -replace '\{patch\}', $patch
+$output = $output -replace '\{version\}', $baseVersion
+$output = $output -replace '\{prerelease\}', $prerelease
+$output = $output -replace '\{commits\}', $commits
+$output = $output -replace '\{timestamp\}', $ts
+$output = $output -replace '\{metadata\}', $metadata
+
+# Clean up empty segments - remove separators around empty values
+do {
+    $prev = $output
+    $output = $output -replace '--', '-'
+    $output = $output -replace '\+\+', '+'
+    $output = $output -replace '-\+', '+'
+    $output = $output -replace '\+-', '-'
+} while ($output -ne $prev)
+
+# Remove trailing separators
+$output = $output -replace '[-+]+$', ''
+
+Write-Output $output

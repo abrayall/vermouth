@@ -19,10 +19,22 @@ const (
 	colorReset   = "\033[0m"
 )
 
+// VersionInfo holds all parsed version components
+type VersionInfo struct {
+	Major      string
+	Minor      string
+	Patch      string
+	Prerelease string
+	Commits    string
+	Timestamp  string
+	Metadata   string
+}
+
 func main() {
 	timestampFormat := "YYYYMMddHHmmss" // default
 	defaultVersion := "0.0.1"           // default
 	pattern := "v*.*.*"                 // default
+	format := "{version+}"              // default
 	var metadata string
 
 	for _, arg := range os.Args[1:] {
@@ -41,10 +53,12 @@ func main() {
 			defaultVersion = strings.TrimPrefix(arg, "--default=")
 		case strings.HasPrefix(arg, "--pattern="):
 			pattern = strings.TrimPrefix(arg, "--pattern=")
+		case strings.HasPrefix(arg, "--format="):
+			format = strings.TrimPrefix(arg, "--format=")
 		}
 	}
 
-	version, err := getVersion(".", timestampFormat, metadata, defaultVersion, pattern)
+	version, err := getVersion(".", timestampFormat, metadata, defaultVersion, pattern, format)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
@@ -65,6 +79,44 @@ func convertTimeFormat(format string) string {
 		"ss", "05",
 	)
 	return replacer.Replace(format)
+}
+
+// formatVersion applies the format string to the version info
+func formatVersion(info VersionInfo, format string) string {
+	// First expand {version+} to the full format
+	format = strings.ReplaceAll(format, "{version+}", "{version}-{prerelease}-{commits}-{timestamp}+{metadata}")
+
+	// Build {version} = major.minor.patch
+	baseVersion := fmt.Sprintf("%s.%s.%s", info.Major, info.Minor, info.Patch)
+
+	// Replace all placeholders
+	result := format
+	result = strings.ReplaceAll(result, "{major}", info.Major)
+	result = strings.ReplaceAll(result, "{minor}", info.Minor)
+	result = strings.ReplaceAll(result, "{patch}", info.Patch)
+	result = strings.ReplaceAll(result, "{version}", baseVersion)
+	result = strings.ReplaceAll(result, "{prerelease}", info.Prerelease)
+	result = strings.ReplaceAll(result, "{commits}", info.Commits)
+	result = strings.ReplaceAll(result, "{timestamp}", info.Timestamp)
+	result = strings.ReplaceAll(result, "{metadata}", info.Metadata)
+
+	// Clean up empty segments - remove separators around empty values
+	// Handle patterns like "1.0.0--" or "1.0.0-+" or "--5" etc.
+	for {
+		prev := result
+		result = strings.ReplaceAll(result, "--", "-")
+		result = strings.ReplaceAll(result, "++", "+")
+		result = strings.ReplaceAll(result, "-+", "+")
+		result = strings.ReplaceAll(result, "+-", "-")
+		if result == prev {
+			break
+		}
+	}
+
+	// Remove trailing separators
+	result = strings.TrimRight(result, "-+")
+
+	return result
 }
 
 func printHelp() {
@@ -90,28 +142,32 @@ func printHelp() {
 	fmt.Println("  -h, --help             Show this help message")
 	fmt.Println("  -v, --version          Show vermouth version")
 	fmt.Println("  --timestamp=FORMAT     Timestamp format (default: YYYYMMddHHmmss)")
-	fmt.Println("  --metadata=VALUE       Append build metadata with +")
+	fmt.Println("  --metadata=VALUE       Sets the metadata part of the version")
 	fmt.Println("  --default=VERSION      Default version if none found (default: 0.0.1)")
 	fmt.Println("  --pattern=PATTERN      Git tag pattern to match (default: v*.*.*)")
+	fmt.Println("  --format=FORMAT        Output format (default: {version+})")
 	fmt.Println()
-	fmt.Println(colorPrimary + "Supported tag formats:" + colorReset)
-	fmt.Println("  v1.0.0          Release version")
-	fmt.Println("  v1.0.0-beta1    Pre-release version")
-	fmt.Println("  v1.0.0-rc.1     Release candidate")
+	fmt.Println(colorPrimary + "Format placeholders:" + colorReset)
+	fmt.Println("  {major}       Major version number")
+	fmt.Println("  {minor}       Minor version number")
+	fmt.Println("  {patch}       Patch version number")
+	fmt.Println("  {version}     {major}.{minor}.{patch}")
+	fmt.Println("  {prerelease}  Pre-release identifier (e.g., beta1)")
+	fmt.Println("  {commits}     Commits since tag")
+	fmt.Println("  {timestamp}   Timestamp for uncommitted changes")
+	fmt.Println("  {metadata}    Build metadata")
+	fmt.Println("  {version+}    Full version: {version}-{prerelease}-{commits}-{timestamp}+{metadata}")
 	fmt.Println()
-	fmt.Println(colorPrimary + "Output format:" + colorReset)
-	timestamp := time.Now().Format("20060102150405")
-	fmt.Println("  1.0.0                            On a tagged commit")
-	fmt.Println("  1.0.0-beta1                      On a pre-release tag")
-	fmt.Println("  1.0.0-5                          5 commits after release tag")
-	fmt.Println("  1.0.0-beta1-5                    5 commits after pre-release tag")
-	fmt.Printf("  1.0.0-beta1-5-%s     Uncommitted changes\n", timestamp)
-	fmt.Println("  1.0.0+build.123                  With metadata")
-	fmt.Printf("  1.0.0-beta1-5-%s+abc With timestamp and metadata\n", timestamp)
+	fmt.Println(colorPrimary + "Format examples:" + colorReset)
+	fmt.Println("  {version+}              1.2.3-beta1-5-20251205143022+build")
+	fmt.Println("  v{version+}             v1.2.3-beta1-5-20251205143022+build")
+	fmt.Println("  v{version}              v1.2.3")
+	fmt.Println("  {major}.{minor}         1.2")
+	fmt.Println("  {version}-SNAPSHOT      1.2.3-SNAPSHOT")
 	fmt.Println()
 }
 
-func getVersion(dir string, timestampFormat string, metadata string, defaultVersion string, pattern string) (string, error) {
+func getVersion(dir string, timestampFormat string, metadata string, defaultVersion string, pattern string, format string) (string, error) {
 	// Get version from git describe
 	cmd := exec.Command("git", "describe", "--tags", "--match", pattern)
 	cmd.Dir = dir
@@ -129,27 +185,30 @@ func getVersion(dir string, timestampFormat string, metadata string, defaultVers
 	versionRegex := regexp.MustCompile(`^v(\d+)\.(\d+)\.(\d+)(-([a-zA-Z][a-zA-Z0-9.]*))?(-(\d+)-g([0-9a-f]+))?$`)
 	matches := versionRegex.FindStringSubmatch(gitDescribe)
 
-	var version string
+	info := VersionInfo{
+		Metadata: metadata,
+	}
+
 	if matches != nil {
-		major := matches[1]
-		minor := matches[2]
-		patch := matches[3]
-		prerelease := matches[5]
-		commitCount := matches[7]
-
-		// Build version string
-		if prerelease != "" {
-			version = fmt.Sprintf("%s.%s.%s-%s", major, minor, patch, prerelease)
-		} else {
-			version = fmt.Sprintf("%s.%s.%s", major, minor, patch)
-		}
-
-		if commitCount != "" {
-			version = fmt.Sprintf("%s-%s", version, commitCount)
-		}
+		info.Major = matches[1]
+		info.Minor = matches[2]
+		info.Patch = matches[3]
+		info.Prerelease = matches[5]
+		info.Commits = matches[7]
 	} else {
-		// Use default version (could be anything: 0.0.1, dev, SNAPSHOT, etc.)
-		version = defaultVersion
+		// Parse default version if it looks like X.Y.Z
+		defaultRegex := regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)$`)
+		defaultMatches := defaultRegex.FindStringSubmatch(defaultVersion)
+		if defaultMatches != nil {
+			info.Major = defaultMatches[1]
+			info.Minor = defaultMatches[2]
+			info.Patch = defaultMatches[3]
+		} else {
+			// Non-standard default, just use it as-is
+			info.Major = defaultVersion
+			info.Minor = ""
+			info.Patch = ""
+		}
 	}
 
 	// Check for uncommitted changes
@@ -158,14 +217,8 @@ func getVersion(dir string, timestampFormat string, metadata string, defaultVers
 	output, err = cmd.Output()
 	if err == nil && len(strings.TrimSpace(string(output))) > 0 {
 		goFormat := convertTimeFormat(timestampFormat)
-		timestamp := time.Now().Format(goFormat)
-		version = fmt.Sprintf("%s-%s", version, timestamp)
+		info.Timestamp = time.Now().Format(goFormat)
 	}
 
-	// Append metadata if provided
-	if metadata != "" {
-		version = fmt.Sprintf("%s+%s", version, metadata)
-	}
-
-	return version, nil
+	return formatVersion(info, format), nil
 }

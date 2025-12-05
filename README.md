@@ -40,6 +40,12 @@ Run vermouth directly without installing:
 curl -sfL https://raw.githubusercontent.com/abrayall/vermouth/refs/heads/main/vermouth.sh | sh -
 ```
 
+With parameters:
+
+```bash
+curl -sfL https://raw.githubusercontent.com/abrayall/vermouth/refs/heads/main/vermouth.sh | sh -s -- --format="v{version}" --metadata=build123
+```
+
 This downloads and executes the script in a single command - no root access or file storage required.
 
 ### Options
@@ -48,10 +54,25 @@ This downloads and executes the script in a single command - no root access or f
 -h, --help             Show help message
 -v, --version          Show vermouth version
 --timestamp=FORMAT     Timestamp format (default: YYYYMMddHHmmss)
---metadata=VALUE       Append build metadata with +
+--metadata=VALUE       Sets the metadata part of the version
 --default=VERSION      Default version if none found (default: 0.0.1)
 --pattern=PATTERN      Git tag pattern to match (default: v*.*.*)
+--format=FORMAT        Output format (default: {version+})
 ```
+
+### Format Placeholders
+
+| Placeholder | Description |
+|-------------|-------------|
+| `{major}` | Major version number |
+| `{minor}` | Minor version number |
+| `{patch}` | Patch version number |
+| `{version}` | Full base version (`{major}.{minor}.{patch}`) |
+| `{prerelease}` | Pre-release identifier (e.g., beta1) |
+| `{commits}` | Number of commits since tag |
+| `{timestamp}` | Timestamp for uncommitted changes |
+| `{metadata}` | Build metadata |
+| `{version+}` | Shortcut for `{version}-{prerelease}-{commits}-{timestamp}+{metadata}` |
 
 ### Examples
 
@@ -91,6 +112,22 @@ vermouth --pattern="*.*.*"
 # Match release tags only (e.g., release/1.0.0)
 vermouth --pattern="release/*"
 # Output: 1.0.0
+
+# Custom format - just major.minor
+vermouth --format="{major}.{minor}"
+# Output: 1.2
+
+# Custom format - with v prefix
+vermouth --format="v{version}"
+# Output: v1.2.3
+
+# Custom format - SNAPSHOT style
+vermouth --format="{version}-SNAPSHOT"
+# Output: 1.2.3-SNAPSHOT
+
+# Custom format - full version with v prefix
+vermouth --format="v{version+}"
+# Output: v1.2.3-beta1-5-20251205143022+build
 ```
 
 ## Version Detection
