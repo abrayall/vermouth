@@ -80,7 +80,13 @@ for arg in "$@"; do
 done
 
 # Get version from git describe
-GIT_DESCRIBE=$(git describe --tags --match "$PATTERN" 2>/dev/null || echo "v${DEFAULT_VERSION}")
+# First check if HEAD has multiple version tags — if so, pick the highest semver
+HEAD_TAGS=$(git tag --points-at HEAD --sort=-v:refname 2>/dev/null | grep -E "^v?[0-9]+\.[0-9]+\.[0-9]+" | head -1)
+if [ -n "$HEAD_TAGS" ]; then
+    GIT_DESCRIBE="$HEAD_TAGS"
+else
+    GIT_DESCRIBE=$(git describe --tags --match "$PATTERN" 2>/dev/null || echo "v${DEFAULT_VERSION}")
+fi
 
 # Remove 'v' prefix
 GIT_DESCRIBE="${GIT_DESCRIBE#v}"
