@@ -168,16 +168,30 @@ func printHelp() {
 }
 
 func getVersion(dir string, timestampFormat string, metadata string, defaultVersion string, pattern string, format string) (string, error) {
-	// Get version from git describe
-	cmd := exec.Command("git", "describe", "--tags", "--match", pattern)
-	cmd.Dir = dir
-	output, err := cmd.Output()
-
+	// Check if HEAD has multiple version tags — pick the highest semver
 	var gitDescribe string
-	if err != nil {
-		gitDescribe = "v" + defaultVersion
-	} else {
-		gitDescribe = strings.TrimSpace(string(output))
+	cmd := exec.Command("git", "tag", "--points-at", "HEAD", "--sort=-v:refname")
+	cmd.Dir = dir
+	if output, err := cmd.Output(); err == nil {
+		versionTag := regexp.MustCompile(`^v?\d+\.\d+\.\d+`)
+		for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+			if versionTag.MatchString(line) {
+				gitDescribe = line
+				break
+			}
+		}
+	}
+
+	// Fall back to git describe if no version tag on HEAD
+	if gitDescribe == "" {
+		cmd = exec.Command("git", "describe", "--tags", "--match", pattern)
+		cmd.Dir = dir
+		output, err := cmd.Output()
+		if err != nil {
+			gitDescribe = "v" + defaultVersion
+		} else {
+			gitDescribe = strings.TrimSpace(string(output))
+		}
 	}
 
 	// Parse git describe output
@@ -212,10 +226,10 @@ func getVersion(dir string, timestampFormat string, metadata string, defaultVers
 	}
 
 	// Check for uncommitted changes
-	cmd = exec.Command("git", "status", "--porcelain")
-	cmd.Dir = dir
-	output, err = cmd.Output()
-	if err == nil && len(strings.TrimSpace(string(output))) > 0 {
+	statusCmd := exec.Command("git", "status", "--porcelain")
+	statusCmd.Dir = dir
+	statusOut, statusErr := statusCmd.Output()
+	if statusErr == nil && len(strings.TrimSpace(string(statusOut))) > 0 {
 		goFormat := convertTimeFormat(timestampFormat)
 		info.Timestamp = time.Now().Format(goFormat)
 	}
